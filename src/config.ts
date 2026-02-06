@@ -38,7 +38,7 @@ export type Config = {
   puppeteerArgs: Array<string>;
   renderOnly: Array<string>;
   closeBrowser: boolean;
-  restrictedUrlPattern: string | null;
+  restrictedUrlPatterns: Array<string | RegExp>;
 };
 
 export class ConfigManager {
@@ -59,7 +59,7 @@ export class ConfigManager {
     puppeteerArgs: ['--no-sandbox'],
     renderOnly: [],
     closeBrowser: false,
-    restrictedUrlPattern: null
+    restrictedUrlPatterns: []
   };
 
   static async getConfiguration(): Promise<Config> {

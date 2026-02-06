@@ -38,7 +38,7 @@ export class Renderer {
       return true;
     }
 
-    if (this.config.restrictedUrlPattern && requestUrl.match(new RegExp(this.config.restrictedUrlPattern))) {
+    if (this.config.restrictedUrlPatterns.length && this.config.restrictedUrlPatterns.some(pattern => pattern instanceof RegExp ? pattern.test(requestUrl) : requestUrl.includes(pattern))) {
       return true;
     }
 

@@ -92,6 +92,7 @@ export class Renderer {
     }
 
     const page = await this.browser.newPage();
+    const inflightRequests = new Map<string, puppeteer.HTTPRequest>();
 
     // Page may reload when setting isMobile
     // https://github.com/GoogleChrome/puppeteer/blob/v1.10.0/docs/api.md#pagesetviewportviewport
@@ -119,6 +120,8 @@ export class Renderer {
       }
     }
 
+    let on_time: boolean = true;
+
     await page.setExtraHTTPHeaders(this.config.reqHeaders);
 
     page.evaluateOnNewDocument('customElements.forcePolyfill = true');
@@ -131,8 +134,18 @@ export class Renderer {
       if (this.restrictRequest(interceptedRequest.url())) {
         interceptedRequest.abort();
       } else {
+        inflightRequests.set(interceptedRequest._requestId, interceptedRequest);
+
         interceptedRequest.continue();
       }
+    });
+    
+    page.on('requestfinished', (req: puppeteer.HTTPRequest) => {
+      if (on_time) inflightRequests.delete(req._requestId);
+    });
+
+    page.on('requestfailed', (req: puppeteer.HTTPRequest) => {
+      if (on_time) inflightRequests.delete(req._requestId);
     });
 
     let response: puppeteer.HTTPResponse | null = null;
@@ -153,6 +166,12 @@ export class Renderer {
         waitUntil: 'networkidle0',
       });
     } catch (e) {
+      if (e instanceof puppeteer.errors.TimeoutError) {
+        on_time = false;
+
+        // TODO: log requests on flight when a timeout occurs.
+        console.log('Inflight requests at timeout:\r\n', Array.from(inflightRequests.values()).map(req => req.url()).join('\r\n'));
+      }
       console.error(e);
     }
 
